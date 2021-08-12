@@ -41,8 +41,8 @@ testN	= 4040
 timeT   = 1280
 
 class ECG(VisionDataset):
-    training_file = './training_t02mc6.pt'
-    test_file = './test_t02mc6.pt'
+    training_file = './training_t1rc6.pt'
+    test_file = './test_t1rc6.pt'
     classes = ['0 - zero', '1 - one', '2 - two', '3 - three', '4 - four',
                '5 - five']
     
@@ -277,11 +277,12 @@ accuracy = {"all": [], "proportion": []}
 exc_voltage_monitor = Monitor(
     network.layers["Ae"], ["v"], time=int(time / dt), device=device
 )
-inh_voltage_monitor = Monitor(
-    network.layers["Ai"], ["v"], time=int(time / dt), device=device
-)
+
+#inh_voltage_monitor = Monitor(
+#    network.layers["Ai"], ["v"], time=int(time / dt), device=device
+#)
 network.add_monitor(exc_voltage_monitor, name="exc_voltage")
-network.add_monitor(inh_voltage_monitor, name="inh_voltage")
+#network.add_monitor(inh_voltage_monitor, name="inh_voltage")
 
 # Set up monitors for spikes and voltages
 spikes = {}
@@ -374,6 +375,9 @@ for epoch in range(n_epochs):
                     np.max(accuracy["proportion"]),
                 )
             )
+        
+            #print(inputs)
+            print("input: ",inputs['X'].sum(),"    label: ",labels[step % update_interval], "   spikes: ",spnum[step % update_interval])
 
             # Assign labels to excitatory layer neurons.
             assignments, proportions, rates = assign_labels(
@@ -392,16 +396,13 @@ for epoch in range(n_epochs):
 
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
-        inh_voltages = inh_voltage_monitor.get("v")
+        #inh_voltages = inh_voltage_monitor.get("v")
 
         # Add to spikes recording.
         spike_record[step % update_interval] = spikes["Ae"].get("s").squeeze()
         
         spnum=spike_record.sum(dim=1)
         spnum=spnum.sum(dim=1)
-
-        #print(inputs)
-        print("input: ",inputs['X'].sum(),"    label: ",labels[step % update_interval], "   spikes: ",spnum[step % update_interval])
 
         network.reset_state_variables()  # Reset state variables.
 

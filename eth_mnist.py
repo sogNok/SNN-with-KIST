@@ -226,6 +226,10 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(tqdm(dataloader)):
         if step > n_train:
             break
+
+        print(batch["encoded_image"].shape)
+        print(batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28).shape)
+        exit(0)
         # Get next input sample.
         inputs = {"X": batch["encoded_image"].view(int(time / dt), 1, 1, 28, 28)}
         if gpu:
