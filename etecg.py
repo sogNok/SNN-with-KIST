@@ -3,7 +3,7 @@ from torchvision.datasets import MNIST
 import warnings
 import os.path
 from typing import Any, Callable, Dict, IO, List, Optional, Tuple, Union
-from classets import ECG, Outlayer, CNN, NN, ANN
+from classets import ECG, Outlayer, CNN, NN, ANN, reservoir
 
 import os
 import sys
@@ -45,7 +45,7 @@ classN	= 6
 trainN	= 10000
 testN	= 4040
 timeT   = 1280
-batch_train = 512
+batch_train = 500
 batch_FC    = 64
 batch_test  = 512
 learning_rate = 0.001
@@ -89,7 +89,7 @@ torch.manual_seed(seed)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 n_workers = 4 * torch.cuda.device_count()
-kwargs = {"num_workers": n_workers, "pin_memory": True} if torch.cuda.is_available() else {}
+kwargs = {"num_workers": 0, "pin_memory": True} if torch.cuda.is_available() else {}
 
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)
@@ -102,24 +102,22 @@ output = LIFNodes(n_neurons, thresh=-52) #np.random.randn(n_neurons).astype(floa
 network.add_layer(output, name="O")
 
 # For GA
-weights = np.load('solution.npy', allow_pickle=True)
-weights = torch.from_numpy(weights).float()
-c1_w, c2_w = weights[0:n_neurons].view(1, n_neurons), weights[n_neurons:].view(n_neurons, n_neurons)
+#weights = np.load('solution.npy', allow_pickle=True)
+#weights = torch.from_numpy(weights).float()
+#c1_w, c2_w = weights[0:n_neurons].view(1, n_neurons), weights[n_neurons:].view(n_neurons, n_neurons)
 
-C1 = Connection(source=inpt, target=output, w=c1_w)#torch.randn(inpt.n, output.n)) #0.5 * torch.randn(inpt.n, output.n))
-C2 = Connection(source=output, target=output, w=c2_w)#torch.randn(output.n, output.n)) #0.5 * torch.randn(output.n, output.n))
+C1 = Connection(source=inpt, target=output, w=torch.randn(inpt.n, output.n)) #0.5 * torch.randn(inpt.n, output.n))
+C2 = Connection(source=output, target=output, w=torch.randn(output.n, output.n)) #0.5 * torch.randn(output.n, output.n))
 
 network.add_connection(C1, source="I", target="O")
 network.add_connection(C2, source="O", target="O")
 
 # Monitors for visualizing activity
+
 spikes = {}
 for l in network.layers:
     spikes[l] = Monitor(network.layers[l], ["s"], time=time, device=device)
     network.add_monitor(spikes[l], name="%s_spikes" % l)
-
-voltages = {"O": Monitor(network.layers["O"], ["v"], time=time, device=device)}
-network.add_monitor(voltages["O"], name="O_voltages")
 
 # Directs network to GPU
 if gpu:
@@ -149,8 +147,8 @@ train_loader = torch.utils.data.DataLoader(
 # Run training data on reservoir computer and store (spikes per neuron, label) per example.
 # Note: Because this is a reservoir network, no adjustments of neuron parameters occurs in this phase.
 n_iters = trainN / batch_train
-out_data = torch.zeros(1, n_neurons, device=device)
-out_label = torch.zeros(1, dtype=torch.int64, device=device)
+out_data = torch.zeros(timeT, trainN, n_neurons, device=device)
+out_label = torch.zeros(trainN, dtype=torch.int64, device=device)
 
 #pbar = tqdm(total=trainN,file=sys.stdout)
 for (i, dataPoint) in enumerate(train_loader):
@@ -176,16 +174,20 @@ for (i, dataPoint) in enumerate(train_loader):
     # Run network on sample image
     network.run(inputs=datum, time=time, input_time_dim=1)
     
-    print(spikes["O"].get("s").sum(0).shape)
+    print(spikes["O"].get("s").shape)
     
     spikes_sum = spikes["O"].get("s")
-    out_data = torch.cat([out_data,spikes_sum], dim=0)
+    print('1')
+    out_data = torch.cat([out_data,spikes_sum], dim=1)
+    print('2')
     out_label = torch.cat([out_label,label], dim=0)
 
     network.reset_state_variables()
+    if gpu:
+        datum = {k: v.cpu() for k, v in datum.items()}
 
-out_data = out_data[1: ,].unsqueeze(1).cpu()
-out_label = out_label[1:].cpu()
+out_data = out_data[:, 1:,].unsqueeze(2)
+out_label = out_label[1:]
 out_dataset = Outlayer(out_data, out_label)
 
 
