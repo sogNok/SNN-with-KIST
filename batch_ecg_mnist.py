@@ -1,5 +1,6 @@
 import os
 import torch
+import pygad
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,14 +28,14 @@ from bindsnet.analysis.plotting import (
 )
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--n_neurons", type=int, default=1)
-parser.add_argument("--batch_size", type=int, default=32)
-parser.add_argument("--n_epochs", type=int, default=1)
+parser.add_argument("--seed", type=int, default=96)
+parser.add_argument("--n_neurons", type=int, default=512)
+parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--n_epochs", type=int, default=200)
 parser.add_argument("--n_test", type=int, default=4040)
 parser.add_argument("--n_train", type=int, default=10000)
 parser.add_argument("--n_workers", type=int, default=-1)
-parser.add_argument("--update_steps", type=int, default=256)
+parser.add_argument("--update_steps", type=int, default=25)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
@@ -87,10 +88,24 @@ print("Running on Device = ", device)
 
 # Determines number of workers to use
 if n_workers == -1:
-    n_workers = 0  # gpu * 1 * torch.cuda.device_count()
+    n_workers = gpu * 4 * torch.cuda.device_count()
 
 n_sqrt = int(np.ceil(np.sqrt(n_neurons)))
 start_intensity = intensity
+
+
+def fitness_func():
+    pass
+def callback_generation():
+    pass
+
+filename='./sol2/utionG13'
+ga = pygad.load(filename=filename)
+solution, a, b = ga.best_solution(ga.last_generation_fitness)
+weights = torch.from_numpy(solution).float()
+c1_w, c2_w = weights[0:n_neurons].view(1, n_neurons), weights[n_neurons:].view(n_neurons, n_neurons)
+
+
 
 # Build network.
 network = reservoir(
@@ -187,7 +202,7 @@ for epoch in range(n_epochs):
             break
         # Get next input sample.
         inputs = {"I": batch[0]}#.permute(1,0,2)}
-        print(inputs["I"].shape)
+        #print(inputs["I"].shape)
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
 
@@ -258,7 +273,8 @@ for epoch in range(n_epochs):
             % update_interval : (step * batch_size % update_interval)
             + s.size(0)
         ] = s
-
+        #print(s.size(0))
+        #print(s.shape)
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
         inh_voltages = inh_voltage_monitor.get("v")

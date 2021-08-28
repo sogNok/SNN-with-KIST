@@ -1,10 +1,17 @@
 import torch
 import subprocess
 import numpy
+import pygad
 
-#subprocess.call(['python', 'test2.py'])
+def fitness_func():
+    pass
+def callback_generation():
+    pass
 
 
-a = numpy.load('solution.npy', allow_pickle=True)
-
-print(a.shape)
+filename='./sol2/utionG27'
+ga = pygad.load(filename=filename)
+solution, a, b = ga.best_solution(ga.last_generation_fitness)
+print(ga.__dict__)
+#print(ga.best_solution_generation)
+#print(solution)

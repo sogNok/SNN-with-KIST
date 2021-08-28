@@ -49,11 +49,11 @@ timeT   = 1280
 batch_train = 512
 batch_FC    = 64
 batch_test  = 512
-learning_rate = 0.001
+learning_rate = 0.0005
 
 seed = 95
 n_neurons = 512
-n_epochs = 15
+n_epochs = 100
 examples = 500
 n_workers = -1
 time = timeT
@@ -78,7 +78,7 @@ kwargs = {"num_workers": n_workers, "pin_memory": True} if torch.cuda.is_availab
 torch.set_num_threads(os.cpu_count() - 1)
 print("Running on Device = ", device)
 
-count = 0
+count = 13
 
 def fitness_func(solution, solution_idx):
     print(f'G{count+1}-{solution_idx}')
@@ -289,7 +289,7 @@ def fitness_func(solution, solution_idx):
 
 fitness_function = fitness_func
 
-num_generations = 100 # Number of generations.
+num_generations = 87 # Number of generations.
 num_parents_mating = 7 # Number of solutions to be selected as parents in the mating pool.
 
 sol_per_pop = 50 # Number of solutions in the population.
@@ -305,14 +305,19 @@ def callback_generation(ga_instance):
     print("Fitness    = {fitness}".format(fitness=ga_instance.best_solution(ga_instance.last_generation_fitness)[1]))
     print("Change     = {change}".format(change=ga_instance.best_solution(ga_instance.last_generation_fitness)[1] - last_fitness))
     last_fitness = ga_instance.best_solution(ga_instance.last_generation_fitness)[1]
-    ga_instance.save(f'./sol/utionG{count}')
+    ga_instance.save(f'./sol2/utionG{count}')
 
+gas = pygad.load('./sol2/utionG13')
+init_pop = gas.population
 # Creating an instance of the GA class inside the ga module. Some parameters are initialized within the constructor.
 ga_instance = pygad.GA(num_generations=num_generations,
                        num_parents_mating=num_parents_mating, 
                        fitness_func=fitness_function,
-                       sol_per_pop=sol_per_pop, 
+                       initial_population=init_pop,
+                       sol_per_pop=sol_per_pop,
                        num_genes=num_genes,
+                       keep_parents=1,
+                       save_best_solutions=True,
                        on_generation=callback_generation)
 
 # Running the GA to optimize the parameters of the function.

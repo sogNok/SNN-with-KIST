@@ -31,13 +31,13 @@ from bindsnet.analysis.plotting import (
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--n_neurons", type=int, default=500)
+parser.add_argument("--n_neurons", type=int, default=512)
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--n_epochs", type=int, default=1)
 parser.add_argument("--n_test", type=int, default=10000)
 parser.add_argument("--n_train", type=int, default=150)
 parser.add_argument("--n_workers", type=int, default=-1)
-parser.add_argument("--update_steps", type=int, default=256)
+parser.add_argument("--update_steps", type=int, default=150)
 parser.add_argument("--exc", type=float, default=22.5)
 parser.add_argument("--inh", type=float, default=120)
 parser.add_argument("--theta_plus", type=float, default=0.05)
@@ -49,7 +49,7 @@ parser.add_argument("--train", dest="train", action="store_true")
 parser.add_argument("--test", dest="train", action="store_false")
 parser.add_argument("--plot", dest="plot", action="store_true")
 parser.add_argument("--gpu", dest="gpu", action="store_true")
-parser.set_defaults(plot=True, gpu=True)
+parser.set_defaults(plot=False, gpu=True)
 
 args = parser.parse_args()
 
@@ -190,14 +190,14 @@ for epoch in range(n_epochs):
     for step, batch in enumerate(train_dataloader):
         if step > n_train:
             break
-        print(batch["encoded_image"].shape)
+        
         # Get next input sample.
         inputs = {"X": batch["encoded_image"]}
         if gpu:
             inputs = {k: v.cuda() for k, v in inputs.items()}
 
-        print(inputs["X"].shape)
-        exit(0)
+        #print(inputs["X"].shape)
+        #exit(0)
         if step % update_steps == 0 and step > 0:
             # Convert the array of labels into a tensor
             label_tensor = torch.tensor(labels, device=device)
@@ -256,7 +256,7 @@ for epoch in range(n_epochs):
             labels = []
 
         labels.extend(batch["label"].tolist())
-        print(np.shape(labels))
+        #print('label', np.shape(labels))
         # Run the network on the input.
         network.run(inputs=inputs, time=time, input_time_dim=1)
 
@@ -267,7 +267,7 @@ for epoch in range(n_epochs):
             % update_interval : (step * batch_size % update_interval)
             + s.size(0)
         ] = s
-
+        #print('s', s.shape)
         # Get voltage recording.
         exc_voltages = exc_voltage_monitor.get("v")
         inh_voltages = inh_voltage_monitor.get("v")
@@ -302,7 +302,7 @@ for epoch in range(n_epochs):
             plt.pause(1e-8)
 
         network.reset_state_variables()  # Reset state variables.
-        pbar_training.update(batch_size)
+        pbar_training.update()
 
 print("Progress: %d / %d (%.4f seconds)" % (epoch + 1, n_epochs, t() - start))
 print("Training complete.\n")
@@ -337,7 +337,7 @@ network.train(mode=False)
 start = t()
 
 pbar = tqdm(total=n_test)
-for step, batch in enumerate(test_dataset):
+for step, batch in enumerate(test_dataloader):
     if step > n_test:
         break
     # Get next input sample.
@@ -373,7 +373,7 @@ for step, batch in enumerate(test_dataset):
 
     network.reset_state_variables()  # Reset state variables.
     pbar.set_description_str("Test progress: ")
-    pbar.update()
+    pbar.update(batch_size)
 
 print("\nAll activity accuracy: %.2f" % (accuracy["all"] / n_test))
 print("Proportion weighting accuracy: %.2f \n" % (accuracy["proportion"] / n_test))

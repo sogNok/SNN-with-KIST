@@ -8,6 +8,7 @@ from classets import ECG, Outlayer, CNN, NN, ANN
 import os
 import sys
 import torch
+import pygad
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -48,12 +49,12 @@ timeT   = 1280
 batch_train = 512
 batch_FC    = 64
 batch_test  = 512
-learning_rate = 0.001
+learning_rate = 0.0005
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=95)
 parser.add_argument("--n_neurons", type=int, default=512)
-parser.add_argument("--n_epochs", type=int, default=2)
+parser.add_argument("--n_epochs", type=int, default=300)
 parser.add_argument("--examples", type=int, default=500)
 parser.add_argument("--n_workers", type=int, default=-1)
 parser.add_argument("--time", type=int, default=timeT)
@@ -102,7 +103,17 @@ output = LIFNodes(n_neurons, thresh=-52) #np.random.randn(n_neurons).astype(floa
 network.add_layer(output, name="O")
 
 # For GA
-weights = np.load('solution.npy', allow_pickle=True)
+def fitness_func():
+    pass
+def callback_generation():
+    pass
+
+filename='./sol/utionG80'
+ga = pygad.load(filename=filename)
+weights, fit, _ = ga.best_solution(ga.last_generation_fitness)
+
+print(fit)
+#weights = np.load('solution.npy', allow_pickle=True)
 weights = torch.from_numpy(weights).float()
 c1_w, c2_w = weights[0:n_neurons].view(1, n_neurons), weights[n_neurons:].view(n_neurons, n_neurons)
 
@@ -212,6 +223,7 @@ for epoch in range(n_epochs):
     )
 
     for (i, dataPoint) in enumerate(out_loader):
+        #print(f'{epoch+1} - {i+1}')
         X, Y = dataPoint
         
         # Reset gradients to 0
